@@ -58,40 +58,83 @@ document.addEventListener('DOMContentLoaded', () => {
         observer.observe(el);
     });
 
-    // Preview Slider Logic (A/B 필터 제거 — 11장 단일 슬라이더)
+    // Preview Slider Logic
     const prevBtn = document.getElementById('prevBtn');
     const nextBtn = document.getElementById('nextBtn');
     const indicator = document.getElementById('sliderIndicator');
+    const viewModeBtn = document.getElementById('viewModeToggleBtn');
 
     let currentIndex = 0;
+    let viewMode = 'single'; // 'single' | 'grid'
+
+    const sliderContainer = document.querySelector('.slider-container');
 
     const updateSlider = () => {
         const slides = document.querySelectorAll('#previewSlider .slide');
         const total = slides.length;
+        if (total === 0) return;
 
-        // Hide ALL slides first
-        slides.forEach(s => {
-            s.style.display = 'none';
-            s.classList.remove('active');
-        });
+        if (viewMode === 'grid') {
+            // 페이지 시작 인덱스 (4의 배수로 스냅)
+            const pageStart = Math.floor(currentIndex / 4) * 4;
+            const totalPages = Math.ceil(total / 4);
+            const pageNum = Math.floor(pageStart / 4) + 1;
 
-        // Show ONLY the current slide
-        if (slides[currentIndex]) {
-            slides[currentIndex].style.display = 'flex';
-            slides[currentIndex].classList.add('active');
-        }
+            slides.forEach((s, i) => {
+                if (i >= pageStart && i < pageStart + 4) {
+                    s.style.display = 'flex';
+                    s.classList.add('active');
+                } else {
+                    s.style.display = 'none';
+                    s.classList.remove('active');
+                }
+            });
 
-        // Update indicator
-        if (indicator) {
-            indicator.textContent = `${currentIndex + 1} / ${total}`;
+            if (indicator) indicator.textContent = `${pageNum} / ${totalPages} 페이지`;
+            if (sliderContainer) sliderContainer.classList.add('grid-mode');
+        } else {
+            // 단일 슬라이드 모드
+            slides.forEach(s => {
+                s.style.display = 'none';
+                s.classList.remove('active');
+            });
+            if (slides[currentIndex]) {
+                slides[currentIndex].style.display = 'flex';
+                slides[currentIndex].classList.add('active');
+            }
+            if (indicator) indicator.textContent = `${currentIndex + 1} / ${total}`;
+            if (sliderContainer) sliderContainer.classList.remove('grid-mode');
         }
     };
+
+    // 뷰 모드 토글
+    if (viewModeBtn) {
+        viewModeBtn.addEventListener('click', () => {
+            viewMode = (viewMode === 'single') ? 'grid' : 'single';
+            if (viewMode === 'grid') {
+                viewModeBtn.innerHTML = '<span style="font-size:1rem;line-height:1;">▣</span> 1개씩 보기';
+                viewModeBtn.style.background = '#1e3a5f';
+                viewModeBtn.style.color = '#fff';
+                viewModeBtn.classList.add('active-grid');
+                // 현재 인덱스를 페이지 시작으로 스냅
+                currentIndex = Math.floor(currentIndex / 4) * 4;
+            } else {
+                viewModeBtn.innerHTML = '<span style="font-size:1rem;line-height:1;">⊞</span> 4개씩 보기';
+                viewModeBtn.style.background = '#fff';
+                viewModeBtn.style.color = '#1e3a5f';
+                viewModeBtn.classList.remove('active-grid');
+            }
+            updateSlider();
+        });
+    }
 
     if (prevBtn) {
         prevBtn.addEventListener('click', (e) => {
             e.preventDefault();
             const total = document.querySelectorAll('#previewSlider .slide').length;
-            currentIndex = (currentIndex - 1 + total) % total;
+            const step = (viewMode === 'grid') ? 4 : 1;
+            currentIndex = (currentIndex - step + total) % total;
+            if (viewMode === 'grid') currentIndex = Math.floor(currentIndex / 4) * 4;
             updateSlider();
         });
     }
@@ -100,7 +143,9 @@ document.addEventListener('DOMContentLoaded', () => {
         nextBtn.addEventListener('click', (e) => {
             e.preventDefault();
             const total = document.querySelectorAll('#previewSlider .slide').length;
-            currentIndex = (currentIndex + 1) % total;
+            const step = (viewMode === 'grid') ? 4 : 1;
+            currentIndex = (currentIndex + step) % total;
+            if (viewMode === 'grid') currentIndex = Math.floor(currentIndex / 4) * 4;
             updateSlider();
         });
     }
@@ -133,12 +178,12 @@ document.addEventListener('DOMContentLoaded', () => {
                 img.style.cursor = 'zoom-in';
                 img.title = '클릭하면 크게 볼 수 있습니다';
                 img.addEventListener('click', () => {
-                    const lbOverlay = document.getElementById('lightboxOverlay');
-                    const lbImg = document.getElementById('lightboxImg');
-                    if (lbOverlay && lbImg) {
-                        lbImg.src = src;
-                        lbOverlay.classList.add('active');
-                        document.body.style.overflow = 'hidden';
+                    if (viewMode === 'grid') {
+                        // 4개 보기: 현재 페이지의 슬라이드들을 모두 수집
+                        openGridLightbox();
+                    } else {
+                        // 1개 보기: 해당 이미지만
+                        openSingleLightbox(src);
                     }
                 });
                 div.appendChild(img);
@@ -264,16 +309,66 @@ document.addEventListener('DOMContentLoaded', () => {
     spClose.addEventListener('click', closeSlidePanel);
     slideOverlay.addEventListener('click', closeSlidePanel);
 
+    // ===== Lightbox Helper Functions =====
+    const openSingleLightbox = (src) => {
+        const lbOverlay = document.getElementById('lightboxOverlay');
+        const lbImg = document.getElementById('lightboxImg');
+        const lbGrid = document.getElementById('lightboxGrid');
+        if (lbOverlay && lbImg) {
+            // 단일 이미지 모드
+            if (lbGrid) lbGrid.style.display = 'none';
+            lbImg.src = src;
+            lbImg.style.display = 'block';
+            lbOverlay.classList.remove('lb-grid-mode');
+            lbOverlay.classList.add('active');
+            document.body.style.overflow = 'hidden';
+        }
+    };
+    window.openSingleLightbox = openSingleLightbox;
+
+    const openGridLightbox = () => {
+        const lbOverlay = document.getElementById('lightboxOverlay');
+        const lbImg = document.getElementById('lightboxImg');
+        const lbGrid = document.getElementById('lightboxGrid');
+        if (!lbOverlay || !lbGrid) return;
+
+        // 현재 보이는 4개 슬라이드 이미지 수집
+        const visibleSlides = document.querySelectorAll('#previewSlider .slide[style*="display: flex"], #previewSlider .slide.active');
+        const srcs = [];
+        visibleSlides.forEach(slide => {
+            const img = slide.querySelector('img');
+            if (img && slide.style.display !== 'none') srcs.push(img.src);
+        });
+
+        if (srcs.length === 0) return;
+
+        // 그리드 모드로 라이트박스 열기
+        lbImg.style.display = 'none';
+        lbGrid.innerHTML = '';
+        srcs.forEach(src => {
+            const img = document.createElement('img');
+            img.src = src;
+            img.alt = '확대된 이미지';
+            lbGrid.appendChild(img);
+        });
+        lbGrid.style.display = 'grid';
+        lbOverlay.classList.add('active', 'lb-grid-mode');
+        document.body.style.overflow = 'hidden';
+    };
+
     // Lightbox Close Logic
     const lbOverlay = document.getElementById('lightboxOverlay');
     const lbClose = document.getElementById('lightboxClose');
     if (lbOverlay && lbClose) {
         const closeLb = () => {
-            lbOverlay.classList.remove('active');
+            lbOverlay.classList.remove('active', 'lb-grid-mode');
             document.body.style.overflow = '';
-            // small delay to let transition finish before clearing src
+            // small delay to let transition finish before clearing
             setTimeout(() => {
-                document.getElementById('lightboxImg').src = '';
+                const lbImg = document.getElementById('lightboxImg');
+                const lbGrid = document.getElementById('lightboxGrid');
+                if (lbImg) { lbImg.src = ''; lbImg.style.display = 'block'; }
+                if (lbGrid) { lbGrid.innerHTML = ''; lbGrid.style.display = 'none'; }
             }, 300);
         };
         lbClose.addEventListener('click', closeLb);
@@ -290,27 +385,38 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const isLightboxOpen = lbOverlay && lbOverlay.classList.contains('active');
 
-        // 라이트박스가 열려 있을 때 — 슬라이드 이동 + 라이트박스 이미지 동기화
+        // 라이트박스가 열려 있을 때
         if (isLightboxOpen && (e.key === 'ArrowRight' || e.key === 'ArrowLeft')) {
             e.preventDefault();
             const slides = document.querySelectorAll('#previewSlider .slide');
             const total = slides.length;
             if (total === 0) return;
 
-            if (e.key === 'ArrowRight') {
-                currentIndex = (currentIndex + 1) % total;
+            if (viewMode === 'grid') {
+                // 그리드 모드: 4개씩 페이지 이동 후 그리드 라이트박스 갱신
+                const step = 4;
+                if (e.key === 'ArrowRight') {
+                    currentIndex = (currentIndex + step) % total;
+                } else {
+                    currentIndex = (currentIndex - step + total) % total;
+                }
+                currentIndex = Math.floor(currentIndex / 4) * 4;
+                updateSlider();
+                // 그리드 라이트박스 이미지 갱신
+                setTimeout(() => openGridLightbox(), 50);
             } else {
-                currentIndex = (currentIndex - 1 + total) % total;
-            }
-
-            // 슬라이더도 함께 이동
-            updateSlider();
-
-            // 라이트박스 이미지 업데이트
-            const lbImg = document.getElementById('lightboxImg');
-            const currentSlideImg = slides[currentIndex] && slides[currentIndex].querySelector('img');
-            if (lbImg && currentSlideImg) {
-                lbImg.src = currentSlideImg.src;
+                // 단일 모드: 1개씩 이동 후 단일 라이트박스 갱신
+                if (e.key === 'ArrowRight') {
+                    currentIndex = (currentIndex + 1) % total;
+                } else {
+                    currentIndex = (currentIndex - 1 + total) % total;
+                }
+                updateSlider();
+                const lbImg = document.getElementById('lightboxImg');
+                const currentSlideImg = slides[currentIndex] && slides[currentIndex].querySelector('img');
+                if (lbImg && currentSlideImg) {
+                    lbImg.src = currentSlideImg.src;
+                }
             }
             return;
         }
@@ -321,14 +427,18 @@ document.addEventListener('DOMContentLoaded', () => {
                 e.preventDefault();
                 const total = document.querySelectorAll('#previewSlider .slide').length;
                 if (total > 0) {
-                    currentIndex = (currentIndex + 1) % total;
+                    const step = (viewMode === 'grid') ? 4 : 1;
+                    currentIndex = (currentIndex + step) % total;
+                    if (viewMode === 'grid') currentIndex = Math.floor(currentIndex / 4) * 4;
                     updateSlider();
                 }
             } else if (e.key === 'ArrowLeft') {
                 e.preventDefault();
                 const total = document.querySelectorAll('#previewSlider .slide').length;
                 if (total > 0) {
-                    currentIndex = (currentIndex - 1 + total) % total;
+                    const step = (viewMode === 'grid') ? 4 : 1;
+                    currentIndex = (currentIndex - step + total) % total;
+                    if (viewMode === 'grid') currentIndex = Math.floor(currentIndex / 4) * 4;
                     updateSlider();
                 }
             }
