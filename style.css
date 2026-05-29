@@ -1285,6 +1285,41 @@ body {
     box-shadow: 0 4px 15px rgba(0,0,0,0.2);
 }
 
+/* ===== Grid Mode (4개씩 보기) ===== */
+.slider-container.grid-mode {
+    height: 90vh;
+    min-height: 600px;
+}
+.slider-container.grid-mode .slider-wrapper {
+    display: grid !important;
+    grid-template-columns: 1fr 1fr;
+    grid-template-rows: 1fr 1fr;
+    gap: 10px;
+    padding: 16px 70px 50px;
+    height: 100%;
+    box-sizing: border-box;
+}
+.slider-container.grid-mode .slide {
+    min-width: unset !important;
+    width: 100% !important;
+    height: 100% !important;
+    padding: 6px !important;
+    border-radius: 8px;
+    border: 1px solid var(--border-light);
+    background: #fafbfc;
+    transition: box-shadow 0.2s ease;
+}
+.slider-container.grid-mode .slide:hover {
+    box-shadow: 0 4px 16px rgba(30,58,95,0.12);
+}
+.slider-container.grid-mode .slide img {
+    max-width: 100%;
+    max-height: 100%;
+    object-fit: contain;
+    border-radius: 6px;
+    box-shadow: none;
+}
+
 /* ===== Footer ===== */
 .footer {
     background: var(--navy);
@@ -1352,6 +1387,32 @@ body {
 
 .lightbox-close:hover {
     color: #ccc;
+}
+
+/* ===== Lightbox Grid Mode (4개 보기) ===== */
+.lightbox-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    grid-template-rows: 1fr 1fr;
+    gap: 12px;
+    width: min(92vw, 1600px);
+    max-height: 90vh;
+    padding: 8px;
+}
+
+.lightbox-grid img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    border-radius: 8px;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.4);
+    background: rgba(255,255,255,0.05);
+    max-height: 42vh;
+}
+
+/* 그리드 라이트박스: 배경 살짝 어둡게 */
+.lightbox-overlay.lb-grid-mode {
+    background: rgba(0, 0, 0, 0.9);
 }
 
 /* ===== Responsive ===== */
